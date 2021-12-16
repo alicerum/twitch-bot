@@ -1,0 +1,51 @@
+name:                twitch-bot
+version:             0.1.0.0
+github:              "githubuser/testproj"
+license:             BSD3
+author:              "Alice Rum"
+maintainer:          "example@example.com"
+copyright:           "2021 Author name here"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:        Test project to play with haskell's websockets, configs and twitch 
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+  - yaml >= 0.11.7.0
+  - bytestring >= 0.10.12.0
+
+executables:
+  twitch-bot:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - twitch-bot
+
+tests:
+  twitch-bot-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - twitch-bot
