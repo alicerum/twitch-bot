@@ -10,7 +10,8 @@ module Config (
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
 import Data.Yaml
 import qualified Data.ByteString as B
-import System.Environment (getEnv)
+import System.Environment (lookupEnv, getEnv)
+import Data.Maybe (fromMaybe)
 
 data Config = Config {
     oauthToken :: String
@@ -29,9 +30,12 @@ instance FromJSON Config where
 
 writeConfig :: Config -> IO ()
 writeConfig config = do
-    xdgHome <- getEnv "XDG_CONFIG_HOME"
+    result  <- lookupEnv "XDG_CONFIG_HOME"
+    home <- getEnv "HOME"
+    let xdgHome = fromMaybe (home ++ "/.config/") result
+
     putStrLn $ "XDG_CONFIG_HOME is: " ++ xdgHome
 
-    withFile "/home/wv/test.yaml" WriteMode (\handle -> do
+    withFile "/Users/wyvie/test.yaml" WriteMode (\handle -> do
         B.hPutStr handle (encode config))
 
