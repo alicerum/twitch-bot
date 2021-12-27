@@ -1,0 +1,13 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:twitch-bot"
+
+    - path: "app/Main.hs"
+      component: "twitch-bot:exe:twitch-bot"
+
+    - path: "app/Paths_twitch_bot.hs"
+      component: "twitch-bot:exe:twitch-bot"
+
+    - path: "test"
+      component: "twitch-bot:test:twitch-bot-test"

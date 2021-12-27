@@ -9,7 +9,9 @@ module Config (
 
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
 import Data.Yaml
+import System.Directory (createDirectoryIfMissing)
 import qualified Data.ByteString as B
+import qualified Data.Text.Lazy.IO as DTL
 import System.Environment (lookupEnv, getEnv)
 import Data.Maybe (fromMaybe)
 
@@ -28,14 +30,23 @@ instance FromJSON Config where
         <$> o .: "oauthToken"
         <*> o .: "dbPath"
 
-writeConfig :: Config -> IO ()
-writeConfig config = do
+
+getConfigFilePath :: IO FilePath
+getConfigFilePath = do
     result  <- lookupEnv "XDG_CONFIG_HOME"
     home <- getEnv "HOME"
     let xdgHome = fromMaybe (home ++ "/.config/") result
+        dir = xdgHome ++ "twitch-bot/"
+        filename = dir ++ "config.yaml"
 
-    putStrLn $ "XDG_CONFIG_HOME is: " ++ xdgHome
+    createDirectoryIfMissing True dir
+    return filename
 
-    withFile "/Users/wyvie/test.yaml" WriteMode (\handle -> do
+
+writeConfig :: Config -> IO ()
+writeConfig config = do
+    filename <- getConfigFilePath
+
+    withFile filename WriteMode (\handle -> do
         B.hPutStr handle (encode config))
 
