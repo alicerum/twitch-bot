@@ -27,6 +27,7 @@ library
   exposed-modules:
       Config
       Lib
+      Options
   other-modules:
       Paths_twitch_bot
   hs-source-dirs:
@@ -35,6 +36,7 @@ library
       base >=4.7 && <5
     , bytestring >=0.10.12.0
     , directory >=1.3.6.0
+    , filepath >=1.4.2.1
     , text >=1.2.4.1
     , yaml >=0.11.7.0
   default-language: Haskell2010
@@ -50,6 +52,7 @@ executable twitch-bot
       base >=4.7 && <5
     , bytestring >=0.10.12.0
     , directory >=1.3.6.0
+    , filepath >=1.4.2.1
     , text >=1.2.4.1
     , twitch-bot
     , yaml >=0.11.7.0
@@ -67,6 +70,7 @@ test-suite twitch-bot-test
       base >=4.7 && <5
     , bytestring >=0.10.12.0
     , directory >=1.3.6.0
+    , filepath >=1.4.2.1
     , text >=1.2.4.1
     , twitch-bot
     , yaml >=0.11.7.0

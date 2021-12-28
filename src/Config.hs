@@ -2,8 +2,7 @@
 
 module Config (
     Config(Config),
-    oauthToken,
-    dbPath,
+    Database(Database),
     writeConfig
 ) where
 
@@ -17,18 +16,34 @@ import Data.Maybe (fromMaybe)
 
 data Config = Config {
     oauthToken :: String
-  , dbPath :: FilePath
+  , database :: Database
   } deriving (Eq, Show)
+
+data Database = Database {
+      path :: FilePath
+    , username :: String
+    , password :: String
+    } deriving (Eq, Show)
 
 instance ToJSON Config where
     toJSON config = object [
         "oauthToken" .= oauthToken config,
-        "dbPath" .= dbPath config ]
+        "database" .= object [
+            "path" .= path db,
+            "username" .= username db,
+            "password" .= password db
+        ] ]
+        where db = database config
 
 instance FromJSON Config where
-    parseJSON = withObject "Config" $ \o -> Config
-        <$> o .: "oauthToken"
-        <*> o .: "dbPath"
+    parseJSON = withObject "Config" $ \o -> do
+        oauthToken <- o .: "oauthToken"
+        dbValue <- o .: "database"
+        path <- dbValue .: "path"
+        username <- dbValue .: "username"
+        password <- dbValue .: "password"
+
+        return $ Config oauthToken (Database path username password)
 
 
 getConfigFilePath :: IO FilePath

@@ -1,10 +1,11 @@
 module Main where
 
 import Lib
-import Config (Config(Config), oauthToken, dbPath, writeConfig)
+import Options
+import Config (Config(Config), Database(Database), writeConfig)
 
 main :: IO ()
 main = do
-    let config = Config { oauthToken = "hahaha", dbPath = "/home/wv/db.sqlite" }
-    writeConfig config
+    opts <- getOptions
+    putStrLn (configPath opts)
 
