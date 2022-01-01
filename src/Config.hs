@@ -3,7 +3,8 @@
 module Config (
     Config(Config),
     Database(Database),
-    writeConfig
+    writeDefaultConfig,
+    readConfig
 ) where
 
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
@@ -57,11 +58,22 @@ getConfigFilePath = do
     createDirectoryIfMissing True dir
     return filename
 
+defaultConfig :: Config
+defaultConfig = Config "" (Database "" "" "")
 
-writeConfig :: Config -> IO ()
-writeConfig config = do
-    filename <- getConfigFilePath
+writeDefaultConfig :: FilePath -> IO ()
+writeDefaultConfig path = do
+    withFile path WriteMode (\handle -> do
+        B.hPutStr handle (encode defaultConfig))
 
-    withFile filename WriteMode (\handle -> do
-        B.hPutStr handle (encode config))
+decodeConfig :: FilePath -> B.ByteString -> IO Config
+decodeConfig path bs = case decodeEither bs of
+    Right c -> return c
+    Left s -> fail $ "Could not read config from config file: " ++ s
+
+readConfig :: FilePath -> IO Config
+readConfig path = do
+    withFile path ReadMode (\handle -> do
+        contents <- B.hGetContents handle
+        decodeConfig path contents)
 
