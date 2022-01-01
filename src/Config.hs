@@ -27,14 +27,14 @@ data Database = Database {
     } deriving (Eq, Show)
 
 instance ToJSON Config where
-    toJSON config = object [
-        "oauthToken" .= oauthToken config,
-        "database" .= object [
-            "path" .= path db,
-            "username" .= username db,
-            "password" .= password db
-        ] ]
-        where db = database config
+    toJSON config =
+        let db = database config
+        in object [
+            "oauthToken" .= oauthToken config,
+            "database" .= object [
+                "path" .= path db,
+                "username" .= username db,
+                "password" .= password db ] ]
 
 instance FromJSON Config where
     parseJSON = withObject "Config" $ \o -> do
@@ -67,9 +67,9 @@ writeDefaultConfig path = do
         B.hPutStr handle (encode defaultConfig))
 
 decodeConfig :: FilePath -> B.ByteString -> IO Config
-decodeConfig path bs = case decodeEither bs of
+decodeConfig path bs = case decodeEither' bs of
     Right c -> return c
-    Left s -> fail $ "Could not read config from config file: " ++ s
+    Left e -> fail $ "Could not read config from config file: " ++ prettyPrintParseException e
 
 readConfig :: FilePath -> IO Config
 readConfig path = do
