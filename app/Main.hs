@@ -2,20 +2,41 @@ module Main where
 
 import Lib
 import Options
-import Config (Config(Config), Database(Database), writeDefaultConfig, readConfig)
+import Config (Config, writeDefaultConfig, readConfig)
+import System.IO (hPutStrLn, stderr)
+import Data.Yaml (prettyPrintParseException, ParseException)
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.Class
 
-main :: IO ()
-main = do
-    opts <- getOptions
+data TwitchError = OptionsError String | ParserError ParseException
+
+transformException :: ParseException -> String
+transformException = ("Error during config parse: "++) . prettyPrintParseException
+
+processConfig :: Options -> ExceptT String IO ()
+processConfig opts = do
+    c <- withExceptT transformException (ExceptT (readConfig (configPath opts)))
+    lift $ putStrLn "Config is:"
+    lift $ print c
+
+
+processOptions :: ExceptT String IO ()
+processOptions = do
+    opts <- ExceptT getOptions
     if help opts
-    then do showHelp
-    else do
+    then lift showHelp
+    else
         if newConfig opts
-        then do
+        then lift $ do
             let path = configPath opts
             putStrLn $ "Creating default config: " ++ path
             writeDefaultConfig path
-        else do
-            c <- readConfig (configPath opts)
-            print c
+        else processConfig opts
+
+main :: IO ()
+main = do
+    result <- runExceptT processOptions
+    case result of
+        Left msg -> hPutStrLn stderr msg
+        Right () -> return ()
 

@@ -41,8 +41,8 @@ checkOpts (Left s) = fail s
 checkOpts (Right s) = return s
 
 
-getOptions :: IO Options
+getOptions :: IO (Either String Options)
 getOptions = do
     args <- getArgs
-    checkOpts . parseArgs args =<< defaultOptions
+    parseArgs args <$> defaultOptions
 

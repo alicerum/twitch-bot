@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Config (
-    Config(Config),
-    Database(Database),
+    Config,
+    Database,
     writeDefaultConfig,
     readConfig
 ) where
@@ -47,17 +47,6 @@ instance FromJSON Config where
         return $ Config oauthToken (Database path username password)
 
 
-getConfigFilePath :: IO FilePath
-getConfigFilePath = do
-    result  <- lookupEnv "XDG_CONFIG_HOME"
-    home <- getEnv "HOME"
-    let xdgHome = fromMaybe (home ++ "/.config/") result
-        dir = xdgHome ++ "twitch-bot/"
-        filename = dir ++ "config.yaml"
-
-    createDirectoryIfMissing True dir
-    return filename
-
 defaultConfig :: Config
 defaultConfig = Config "" (Database "" "" "")
 
@@ -66,14 +55,9 @@ writeDefaultConfig path = do
     withFile path WriteMode (\handle -> do
         B.hPutStr handle (encode defaultConfig))
 
-decodeConfig :: FilePath -> B.ByteString -> IO Config
-decodeConfig path bs = case decodeEither' bs of
-    Right c -> return c
-    Left e -> fail $ "Could not read config from config file: " ++ prettyPrintParseException e
-
-readConfig :: FilePath -> IO Config
+readConfig :: FilePath -> IO (Either ParseException Config)
 readConfig path = do
     withFile path ReadMode (\handle -> do
         contents <- B.hGetContents handle
-        decodeConfig path contents)
+        return $ decodeEither' contents)
 
