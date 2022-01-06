@@ -1,5 +1,5 @@
 module Options (
-    Options,
+    Options(Options),
     configPath,
     newConfig,
     help,
