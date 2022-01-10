@@ -4,7 +4,9 @@ module Config (
     Config,
     Database,
     writeDefaultConfig,
-    readConfig
+    readConfig,
+    oauthToken,
+    oauthName
 ) where
 
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
@@ -17,6 +19,7 @@ import Data.Maybe (fromMaybe)
 
 data Config = Config {
     oauthToken :: String
+  , oauthName :: String
   , database :: Database
   } deriving (Eq, Show)
 
@@ -31,6 +34,7 @@ instance ToJSON Config where
         let db = database config
         in object [
             "oauthToken" .= oauthToken config,
+            "oauthName" .= oauthName config,
             "database" .= object [
                 "path" .= path db,
                 "username" .= username db,
@@ -39,16 +43,17 @@ instance ToJSON Config where
 instance FromJSON Config where
     parseJSON = withObject "Config" $ \o -> do
         oauthToken <- o .: "oauthToken"
+        oauthName <- o .: "oauthName"
         dbValue <- o .: "database"
         path <- dbValue .: "path"
         username <- dbValue .: "username"
         password <- dbValue .: "password"
 
-        return $ Config oauthToken (Database path username password)
+        return $ Config oauthToken oauthName (Database path username password)
 
 
 defaultConfig :: Config
-defaultConfig = Config "" (Database "" "" "")
+defaultConfig = Config "" "" (Database "" "" "")
 
 writeDefaultConfig :: FilePath -> IO ()
 writeDefaultConfig path = do

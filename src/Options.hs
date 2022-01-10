@@ -36,11 +36,6 @@ parseArgs (a:args) o
     | a == "-h" || a == "--help" = parseArgs args o {help=True}
     | otherwise = parseArgs args o
 
-checkOpts :: Either String Options -> IO Options
-checkOpts (Left s) = fail s
-checkOpts (Right s) = return s
-
-
 getOptions :: IO (Either String Options)
 getOptions = do
     args <- getArgs

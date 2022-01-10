@@ -19,8 +19,7 @@ transformException = ("Error during config parse: "++) . prettyPrintParseExcepti
 processConfig :: Options -> ExceptT String IO ()
 processConfig opts = do
     c <- withExceptT transformException (ExceptT (readConfig (configPath opts)))
-    lift $ putStrLn "Config is:"
-    lift $ print c
+    runTwitchClient c
 
 processOptions :: ExceptT String IO ()
 processOptions = do
