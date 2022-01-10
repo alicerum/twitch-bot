@@ -28,6 +28,8 @@ library
       Config
       Lib
       Options
+      Twitch.Bot
+      Twitch.Message
   other-modules:
       Paths_twitch_bot
   hs-source-dirs:
