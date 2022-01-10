@@ -44,8 +44,8 @@ parsePing msg conn = do
         T.putStrLn ("Sending pong message: " `append` pongMessage)
         WS.sendTextData conn pongMessage
 
-processCommand :: Text -> Connection -> IO ()
-processCommand msg conn = do
+processCommand :: Text -> Text -> Connection -> IO ()
+processCommand msg chan conn = do
     let message = TM.parseMessage msg
         result = message >>= TB.processMessage
 
@@ -55,7 +55,7 @@ processCommand msg conn = do
     print result
 
     when (isJust result) $ do
-        sendCommand conn "PRIVMSG" (fromJust result)
+        sendCommand conn "PRIVMSG" (chan `append` " :" `append` fromJust result)
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
 app pass name chan conn = do
@@ -69,5 +69,5 @@ app pass name chan conn = do
         msg <- WS.receiveData conn
         parsePing msg conn
         T.putStrLn msg
-        processCommand msg conn
+        processCommand msg chan conn
 
