@@ -48,8 +48,13 @@ processCommand msg conn = do
     let message = TM.parseMessage msg
         result = message >>= TB.processMessage
 
+    putStr "Message is: "
+    print message
+    putStr "Result is: "
+    print result
+
     when (isJust result) $ do
-        WS.sendTextData conn (fromJust result)
+        sendCommand conn "PRIVMSG" (fromJust result)
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
 app pass name chan conn = do
@@ -62,6 +67,6 @@ app pass name chan conn = do
     forever $ do
         msg <- WS.receiveData conn
         parsePing msg conn
+        T.putStrLn msg
         processCommand msg conn
-        liftIO $ T.putStrLn msg
 

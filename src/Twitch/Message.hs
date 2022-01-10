@@ -12,8 +12,6 @@ data Message = Message {
     text :: T.Text
 } deriving (Eq, Show)
 
--- :igorxy69!igorxy69@igorxy69.tmi.twitch.tv PRIVMSG #androidp :Андрей сидел часок касеты перематывал и заспустил
-
 parseMessage :: T.Text -> Maybe Message
 parseMessage msg = do
     let wds = T.words msg
