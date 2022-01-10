@@ -4,6 +4,7 @@ module Lib (
     runTwitchClient
 ) where
 
+import qualified Wuss as WSS
 import qualified Data.Yaml as Y
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Class
@@ -23,12 +24,12 @@ import Data.Maybe
 runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
     let host = "irc-ws.chat.twitch.tv"
-        port = 80
+        port = 443
         pass = pack (token (oauth (twitch cfg)))
         oauthName = pack (name (oauth (twitch cfg)))
         chan = "#" `append` pack (channel (twitch cfg))
 
-    lift $ withSocketsDo $ WS.runClient host port "/" (app pass oauthName chan)
+    lift $ withSocketsDo $ WSS.runSecureClient host port "/" (app pass oauthName chan)
 
 
 sendCommand :: Connection -> Text -> Text -> IO ()
