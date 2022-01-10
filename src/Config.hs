@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Config (
-    Config,
+    Config (twitch),
+    Twitch (oauth, channel),
+    Oauth (token, name),
     Database,
     writeDefaultConfig,
     readConfig,
-    oauthToken,
-    oauthName
 ) where
 
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
@@ -18,10 +18,19 @@ import System.Environment (lookupEnv, getEnv)
 import Data.Maybe (fromMaybe)
 
 data Config = Config {
-    oauthToken :: String
-  , oauthName :: String
+    twitch :: Twitch
   , database :: Database
   } deriving (Eq, Show)
+
+data Oauth = Oauth {
+      token :: String
+    , name :: String
+} deriving (Eq, Show)
+
+data Twitch = Twitch {
+      oauth :: Oauth
+    , channel :: String
+} deriving (Eq, Show)
 
 data Database = Database {
       path :: FilePath
@@ -32,9 +41,17 @@ data Database = Database {
 instance ToJSON Config where
     toJSON config =
         let db = database config
+            twt = twitch config
+            twitchOauth = oauth twt
+
         in object [
-            "oauthToken" .= oauthToken config,
-            "oauthName" .= oauthName config,
+            "twitch" .= object [
+                "channel" .= channel twt,
+                "oauth" .= object [
+                    "token" .= token twitchOauth,
+                    "name" .= name twitchOauth
+                ]
+            ],
             "database" .= object [
                 "path" .= path db,
                 "username" .= username db,
@@ -42,18 +59,27 @@ instance ToJSON Config where
 
 instance FromJSON Config where
     parseJSON = withObject "Config" $ \o -> do
-        oauthToken <- o .: "oauthToken"
-        oauthName <- o .: "oauthName"
+        twitchValue <- o .: "twitch"
+        twitchChannel <- twitchValue .: "channel"
+
+        oauthValue <- twitchValue .: "oauth"
+        oauthToken <- oauthValue .: "token"
+        oauthName <- oauthValue .: "name"
+
         dbValue <- o .: "database"
         path <- dbValue .: "path"
         username <- dbValue .: "username"
         password <- dbValue .: "password"
 
-        return $ Config oauthToken oauthName (Database path username password)
+        return $ Config (Twitch
+                            (Oauth oauthToken oauthName) twitchChannel)
+                            (Database path username password)
 
 
 defaultConfig :: Config
-defaultConfig = Config "" "" (Database "" "" "")
+defaultConfig = Config (Twitch
+                            (Oauth "" "") "")
+                            (Database "" "" "")
 
 writeDefaultConfig :: FilePath -> IO ()
 writeDefaultConfig path = do
