@@ -9,8 +9,12 @@ import Data.Text (Text)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as T
 
+-- |username -> user's message text -> bot's response
+-- Nothing if bot should ignore the user's message
 type Command = Text -> Text -> Maybe Text
 
+-- |processMessage takes user's message as an argument
+-- and returns optional response. Nothing in case no response needed.
 processMessage :: Message -> Maybe Text
 processMessage (Message user text) =
     if not (DT.null text) && DT.head text == '!'

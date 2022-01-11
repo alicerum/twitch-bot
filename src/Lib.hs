@@ -49,11 +49,6 @@ processCommand msg chan conn = do
     let message = TM.parseMessage msg
         result = message >>= TB.processMessage
 
-    putStr "Message is: "
-    print message
-    putStr "Result is: "
-    print result
-
     when (isJust result) $ do
         sendCommand conn "PRIVMSG" (chan `append` " :" `append` fromJust result)
 
@@ -68,6 +63,5 @@ app pass name chan conn = do
     forever $ do
         msg <- WS.receiveData conn
         parsePing msg conn
-        T.putStrLn msg
         processCommand msg chan conn
 
