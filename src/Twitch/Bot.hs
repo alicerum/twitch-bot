@@ -5,6 +5,7 @@ module Twitch.Bot (
 ) where
 
 import Twitch.Message
+import Control.Monad (guard)
 import Data.Text (Text)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as T
@@ -16,29 +17,22 @@ type Command = Text -> Text -> Maybe Text
 -- |processMessage takes user's message as an argument
 -- and returns optional response. Nothing in case no response needed.
 processMessage :: Message -> Maybe Text
-processMessage (Message user text) =
-    if not (DT.null text) && DT.head text == '!'
-    then parseCommand user (DT.tail text)
-    else Nothing
-
-dispatch :: [(Text, Command)]
-dispatch = [
-    ("echo", echoCommand) ]
-
-lookupCommand :: Text -> Maybe Command
-lookupCommand cmd = lookup' dispatch cmd
-                    where lookup' [] _ = Nothing
-                          lookup' (c:others) cmd = if fst c == cmd
-                                                   then Just (snd c)
-                                                   else lookup' others cmd
-
-echoCommand :: Command
-echoCommand _ _ = Just "I am a haskell bot"
+processMessage (Message user text) = do
+    guard $ not (DT.null text)
+    guard $ DT.head text == '!'
+    parseCommand user (DT.tail text)
 
 parseCommand :: Command
 parseCommand user text = do
     let ws = DT.words text
         cmdName = if not (null ws) then head ws else ""
-    cmd <- lookupCommand cmdName
+    cmd <- lookup cmdName dispatch
     cmd user (DT.unwords (tail ws))
+
+dispatch :: [(Text, Command)]
+dispatch = [
+    ("echo", echoCommand) ]
+
+echoCommand :: Command
+echoCommand _ _ = Just "I am a haskell bot"
 
