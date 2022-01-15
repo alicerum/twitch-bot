@@ -23,7 +23,7 @@ data Message = Ping Host | PrivMsg {
 
 pingMessage :: Parser Message
 pingMessage = Ping . pack <$> (string "PING" *> many1 space
-                                *> char ':' *> manyTill anyToken eof)
+                                *> char ':' *> manyTill anyToken (string "\r\n"))
 
 privMsgMessage :: Parser Message
 privMsgMessage = do

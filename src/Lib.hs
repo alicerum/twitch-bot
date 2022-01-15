@@ -44,7 +44,7 @@ processMessage chan msg@TM.PrivMsg{} = TB.processMessage msg >>= \resp -> return
 processCommand :: Text -> Text -> Connection -> IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
-    -- print message
+    print message
     let response = rightToMaybe message >>= processMessage chan
     forM_ response $ WS.sendTextData conn
 
