@@ -30,6 +30,8 @@ dependencies:
 - websockets >= 0.12.7.3
 - wuss >= 1.1.18
 - network >= 3.1.1.1
+- parsec >= 3.1.14.0
+- either >= 5.0.1.1
 
 library:
   source-dirs: src

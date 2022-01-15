@@ -6,15 +6,17 @@ module Lib (
 
 import qualified Wuss as WSS
 import qualified Data.Yaml as Y
+import Data.Either.Combinators
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Class
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
 import qualified Data.Text.IO as T
-import Control.Monad (forever, when)
+import Control.Monad (forever, when, (>=>), forM_)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Text (Text, pack, append, words)
 import qualified Data.Text as DT
+import qualified Data.Text.IO as DTIO
 import Network.WebSockets (Connection)
 import Config (Config, token, oauth, twitch, channel, name)
 import qualified Twitch.Bot as TB
@@ -35,22 +37,16 @@ runTwitchClient cfg = do
 sendCommand :: Connection -> Text -> Text -> IO ()
 sendCommand conn command text = WS.sendTextData conn (command `append` " " `append` text)
 
-parsePing :: Text -> Connection -> IO ()
-parsePing msg conn = do
-    let parts = DT.words msg
-        pongMessage = "PONG :tmi.twitch.tv"
-
-    when (not (null parts) && head parts == "PING") $ do
-        T.putStrLn ("Sending pong message: " `append` pongMessage)
-        WS.sendTextData conn pongMessage
+processMessage :: Text -> TM.Message -> Maybe Text
+processMessage _ (TM.Ping host) = Just $ "PONG :" <> host
+processMessage chan msg@TM.PrivMsg{} = TB.processMessage msg >>= \resp -> return $ "PRIVMSG " <> chan <> " :" <> resp
 
 processCommand :: Text -> Text -> Connection -> IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
-        result = message >>= TB.processMessage
-
-    when (isJust result) $ do
-        sendCommand conn "PRIVMSG" (chan `append` " :" `append` fromJust result)
+    -- print message
+    let response = rightToMaybe message >>= processMessage chan
+    forM_ response $ WS.sendTextData conn
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
 app pass name chan conn = do
@@ -62,6 +58,5 @@ app pass name chan conn = do
 
     forever $ do
         msg <- WS.receiveData conn
-        parsePing msg conn
         processCommand msg chan conn
 

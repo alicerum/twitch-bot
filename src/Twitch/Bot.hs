@@ -17,7 +17,8 @@ type Command = Text -> Text -> Maybe Text
 -- |processMessage takes user's message as an argument
 -- and returns optional response. Nothing in case no response needed.
 processMessage :: Message -> Maybe Text
-processMessage (Message user text) = do
+processMessage (Ping _) = Nothing
+processMessage (PrivMsg user _ text) = do
     guard $ not (DT.null text)
     guard $ DT.head text == '!'
     parseCommand user (DT.tail text)
