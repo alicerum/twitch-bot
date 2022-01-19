@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Twitch.Bot (
-    processMessage
+    processMessage,
+    hoistMaybe
 ) where
 
 import Twitch.Message
@@ -9,15 +10,19 @@ import Control.Monad (guard)
 import Data.Text (Text)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as T
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT))
 
 -- |username -> user's message text -> bot's response
 -- Nothing if bot should ignore the user's message
-type Command = Text -> Text -> Maybe Text
+type Command = Text -> Text -> MaybeT IO Text
+
+hoistMaybe :: Monad m => Maybe a -> MaybeT m a
+hoistMaybe = MaybeT . return
 
 -- |processMessage takes user's message as an argument
 -- and returns optional response. Nothing in case no response needed.
-processMessage :: Message -> Maybe Text
-processMessage (Ping _) = Nothing
+processMessage :: Message -> MaybeT IO Text
+processMessage (Ping _) = hoistMaybe Nothing
 processMessage (PrivMsg user _ text) = do
     guard $ not (DT.null text)
     guard $ DT.head text == '!'
@@ -27,13 +32,18 @@ parseCommand :: Command
 parseCommand user text = do
     let ws = DT.words text
         cmdName = if not (null ws) then head ws else ""
-    cmd <- lookup cmdName dispatch
+    cmd <- hoistMaybe $ lookup cmdName dispatch
     cmd user (DT.unwords (tail ws))
 
 dispatch :: [(Text, Command)]
 dispatch = [
-    ("echo", echoCommand) ]
+    ("echo", echoCommand),
+    ("runh", runhCommand) ]
 
 echoCommand :: Command
-echoCommand _ _ = Just "I am a haskell bot"
+echoCommand _ _ = return "I am a haskell bot"
+
+runhCommand :: Command
+runhCommand _ command = do
+    return "Stub"
 

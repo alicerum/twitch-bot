@@ -22,6 +22,7 @@ import Config (Config, token, oauth, twitch, channel, name)
 import qualified Twitch.Bot as TB
 import qualified Twitch.Message as TM
 import Data.Maybe
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT), runMaybeT)
 
 runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
@@ -37,15 +38,15 @@ runTwitchClient cfg = do
 sendCommand :: Connection -> Text -> Text -> IO ()
 sendCommand conn command text = WS.sendTextData conn (command `append` " " `append` text)
 
-processMessage :: Text -> TM.Message -> Maybe Text
-processMessage _ (TM.Ping host) = Just $ "PONG :" <> host
+processMessage :: Text -> TM.Message -> MaybeT IO Text
+processMessage _ (TM.Ping host) = return $ "PONG :" <> host
 processMessage chan msg@TM.PrivMsg{} = TB.processMessage msg >>= \resp -> return $ "PRIVMSG " <> chan <> " :" <> resp
 
 processCommand :: Text -> Text -> Connection -> IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
     print message
-    let response = rightToMaybe message >>= processMessage chan
+    response <- runMaybeT $ TB.hoistMaybe (rightToMaybe message) >>= processMessage chan
     forM_ response $ WS.sendTextData conn
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
