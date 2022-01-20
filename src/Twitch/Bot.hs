@@ -38,7 +38,8 @@ parseCommand user text = do
 dispatch :: [(Text, Command)]
 dispatch = [
     ("echo", echoCommand),
-    ("runh", runhCommand) ]
+    ("runh", runhCommand), 
+    ("boroda", echoBoroda) ]
 
 echoCommand :: Command
 echoCommand _ _ = return "I am a haskell bot"
@@ -46,4 +47,7 @@ echoCommand _ _ = return "I am a haskell bot"
 runhCommand :: Command
 runhCommand _ command = do
     return "Stub"
+
+echoBoroda :: Command
+echoBoroda user _ = return $ user <> " says HI to @LzheBoroda via haskell bot"
 
