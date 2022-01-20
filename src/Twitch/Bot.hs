@@ -7,10 +7,12 @@ module Twitch.Bot (
 
 import Twitch.Message
 import Control.Monad (guard)
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as T
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT))
+import Twitch.Commands.Runh (runHString)
 
 -- |username -> user's message text -> bot's response
 -- Nothing if bot should ignore the user's message
@@ -45,8 +47,9 @@ echoCommand :: Command
 echoCommand _ _ = return "I am a haskell bot"
 
 runhCommand :: Command
-runhCommand _ command = do
-    return "Stub"
+runhCommand user command = do
+    str <- lift $ runHString (unpack command)
+    return $ "@" <> user <> " > " <> pack str
 
 echoBoroda :: Command
 echoBoroda user _ = return $ user <> " says HI to @LzheBoroda via haskell bot"

@@ -29,6 +29,7 @@ library
       Lib
       Options
       Twitch.Bot
+      Twitch.Commands.Runh
       Twitch.Message
   other-modules:
       Paths_twitch_bot
