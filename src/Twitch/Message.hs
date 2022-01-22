@@ -24,20 +24,36 @@ data Message = Ping Host | PrivMsg {
     text :: T.Text
 } deriving (Eq, Show)
 
+untilTheEnd :: Parser String
+untilTheEnd = manyTill anyToken (string "\r\n")
+
 pingMessage :: Parser Message
-pingMessage = Ping . pack <$> (string "PING" *> many1 space
-                                *> char ':' *> manyTill anyToken (string "\r\n"))
+pingMessage = Ping . pack <$> (string "PING" *> spaces
+                                *> char ':' *> untilTheEnd)
+
+userNameChar :: Parser Char
+userNameChar = choice [letter, char '_', digit]
+
+userName :: Parser String
+userName = (:) <$> letter <*> many userNameChar
+
+userNameWithDomain :: Parser String
+userNameWithDomain = userName
+                  <* char '!'
+                  <* userName
+                  <* char '@'
+                  <* userName
+                  <* string ".tmi.twitch.tv"
+                  <* spaces
+
+channelName :: Parser String
+channelName = char '#' *> userName <* spaces
 
 privMsgMessage :: Parser Message
-privMsgMessage = do
-    void $ char ':'
-    nick <- manyTill anyToken (char '!')
-    void $ manyTill anyToken space
-    void $ string "PRIVMSG" *> space *> char '#'
-    channel <- manyTill anyToken space
-    void $ char ':'
-    msg <- manyTill anyToken (string "\r\n")
-    return $ PrivMsg (pack nick) (pack channel) (pack msg)
+privMsgMessage = PrivMsg <$>
+                 (pack <$> (char ':' *> userNameWithDomain)) <*>
+                 (pack <$> (string "PRIVMSG" *> spaces *> channelName)) <*>
+                 (pack <$> (char ':' *> untilTheEnd))
 
 messageParser :: Parser Message
 messageParser = choice [pingMessage, privMsgMessage]
