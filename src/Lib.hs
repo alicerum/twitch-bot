@@ -5,7 +5,6 @@ module Lib (
 ) where
 
 import qualified Wuss as WSS
-import qualified Data.Yaml as Y
 import Data.Either.Combinators
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Class
@@ -42,10 +41,14 @@ processMessage :: Text -> TM.Message -> MaybeT IO Text
 processMessage _ (TM.Ping host) = return $ "PONG :" <> host
 processMessage chan msg@TM.PrivMsg{} = TB.processMessage msg >>= \resp -> return $ "PRIVMSG " <> chan <> " :" <> resp
 
+printMessage :: TM.Message -> IO ()
+printMessage (TM.Ping host) = T.putStrLn $ "PING from " <> host
+printMessage (TM.PrivMsg user chan msg) = T.putStrLn $ "#" <> chan <> "> " <> user <> ": " <> msg
+
 processCommand :: Text -> Text -> Connection -> IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
-    print message
+    forM_ message printMessage
     response <- runMaybeT $ TB.hoistMaybe (rightToMaybe message) >>= processMessage chan
     forM_ response $ WS.sendTextData conn
 

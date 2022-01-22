@@ -2,7 +2,10 @@
 
 module Twitch.Message (
     Message (PrivMsg, Ping),
-    parseMessage
+    parseMessage,
+    fromUser,
+    text,
+    channel
 ) where
 
 import qualified Data.Text as T
