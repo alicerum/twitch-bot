@@ -4,6 +4,7 @@ module Main where
 
 import Lib
 import Options
+import Control.Lens
 import Config (Config, writeDefaultConfig, readConfig)
 import System.IO (hPutStrLn, stderr)
 import Data.Yaml (prettyPrintParseException, ParseException)
@@ -18,7 +19,7 @@ transformException = ("Error during config parse: "++) . prettyPrintParseExcepti
 
 processConfig :: Options -> ExceptT String IO ()
 processConfig opts = do
-    c <- withExceptT transformException (ExceptT (readConfig (configPath opts)))
+    c <- withExceptT transformException (ExceptT (readConfig (opts ^. configPath)))
     runTwitchClient c
 
 processOptions :: ExceptT String IO ()
@@ -26,9 +27,9 @@ processOptions = do
     opts <- ExceptT getOptions
     checkOpts opts
     where
-        checkOpts opts@Options{..}
-            | help = lift showHelp
-            | newConfig = lift $ createNewConfig configPath
+        checkOpts opts
+            | opts ^. help = lift showHelp
+            | opts ^. newConfig = lift $ createNewConfig $ opts ^. configPath
             | otherwise = processConfig opts
 
 createNewConfig :: FilePath -> IO ()
