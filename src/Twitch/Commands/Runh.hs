@@ -43,7 +43,7 @@ errToMaybe (Right a) = Just a
 runHString :: String -> IO String
 runHString s = do
     res <- runWithTimeout s
-    return $ maybe "unknown errror" (take 200) (res <|> Just "Timed out")
+    return $ maybe "unknown errror" (take 400) (res <|> Just "Timed out")
 
 interp :: String -> IO (Maybe String)
 interp s = fmap errToMaybe $ runInterpreter $ do
@@ -74,4 +74,4 @@ printInterpErr (WontCompile errors) =
       skipNumber = skip ':' . dropWhile isDigit 
       skipSpaces xs = let xs' = dropWhile (==' ') xs
                       in skip '\n' xs' `mplus` return xs'
-printInterpErr other = error (show other)
+printInterpErr other = "ping my owner about this error: " <> show other
