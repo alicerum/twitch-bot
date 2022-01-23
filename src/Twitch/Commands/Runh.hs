@@ -2,12 +2,15 @@ module Twitch.Commands.Runh (
     runHString
 ) where
 
-import Control.Monad (join)
+import Data.List
+import Data.Char
+import Control.Monad (join, MonadPlus (mplus))
 import Control.Concurrent
 import Control.Applicative ((<|>))
 import System.Directory.Internal.Prelude (timeout, fromMaybe)
-import Language.Haskell.Interpreter (as, runInterpreter, setImports, interpret)
-import Control.Exception (evaluate)
+import Language.Haskell.Interpreter (Extension (UnknownExtension), eval, interpret, runInterpreter, setImports, InterpreterError (WontCompile), errMsg)
+import Control.Exception (catch, evaluate)
+import qualified Control.Exception as E
 import Control.DeepSeq (force)
 
 runWithTimeout :: String -> IO (Maybe String)
@@ -15,7 +18,7 @@ runWithTimeout s = do
     mvar <- newEmptyMVar
     threadId <- forkIO  $ do
         res <- interp s
-        newRes <- evaluate $ force res
+        newRes <- evaluate $ force (show <$> res)
         putMVar mvar newRes
 
     threadKiller <- forkIO $ do
@@ -27,8 +30,14 @@ runWithTimeout s = do
     killThread threadKiller
     return res
 
-errToMaybe :: Show e => Either e String -> Maybe String
-errToMaybe (Left e) = Just $ "error " <> (unwords . lines) (show e)
+evaluateExpr :: String -> IO (Maybe String)
+evaluateExpr s = do
+    res <- interp s
+    Just <$> (evaluate (force $ show s) `catch`
+                    \(E.SomeException e) -> return ("Error: " <> show e))
+
+errToMaybe :: Either InterpreterError String -> Maybe String
+errToMaybe (Left e) = Just (printInterpErr e)
 errToMaybe (Right a) = Just a
 
 runHString :: String -> IO String
@@ -38,6 +47,31 @@ runHString s = do
 
 interp :: String -> IO (Maybe String)
 interp s = fmap errToMaybe $ runInterpreter $ do
-    setImports ["Prelude", "Control.Monad"]
-    interpret ("show $ " <> s) (as :: String)
+    setImports ["Prelude", "ShowFun", "Control.Monad"]
+    -- interpret ("show $ " <> s) (as :: String)
+    eval s
 
+readExt :: String -> Extension
+readExt s = case reads s of
+  [(e,[])] -> e
+  _        -> UnknownExtension s
+                 
+printInterpErr :: InterpreterError -> String
+printInterpErr (WontCompile errors) =
+    -- if we get a compilation error we print it directly to avoid \"mueval: ...\"
+    -- maybe it should go to stderr?
+    concatMap (dropLinePosition . errMsg) errors
+    where
+      -- each error starts with the line position, which is uninteresting
+      dropLinePosition e
+          | Just s <- parseErr e =  s
+          | otherwise = e -- if the parse fails we fallback on printing the whole error
+      parseErr e = do s <- stripPrefix "<interactive>:" e
+                      skipSpaces =<< (skipNumber =<< skipNumber s)
+      skip x (y:xs) | x == y = Just xs
+                    | otherwise = Nothing
+      skip _ _ = Nothing
+      skipNumber = skip ':' . dropWhile isDigit 
+      skipSpaces xs = let xs' = dropWhile (==' ') xs
+                      in skip '\n' xs' `mplus` return xs'
+printInterpErr other = error (show other)
