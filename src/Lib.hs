@@ -4,6 +4,8 @@ module Lib (
     runTwitchClient
 ) where
 
+import Control.Lens
+import Control.Monad
 import qualified Wuss as WSS
 import Data.Either.Combinators
 import Control.Monad.Trans.Except
@@ -11,13 +13,12 @@ import Control.Monad.Trans.Class
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
 import qualified Data.Text.IO as T
-import Control.Monad (forever, when, (>=>), forM_)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Text (Text, pack, append, words)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
 import Network.WebSockets (Connection)
-import Config (Config, token, oauth, twitch, channel, name)
+import Config
 import qualified Twitch.Bot as TB
 import qualified Twitch.Message as TM
 import Data.Maybe
@@ -27,15 +28,15 @@ runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
     let host = "irc-ws.chat.twitch.tv"
         port = 443
-        pass = pack (token (oauth (twitch cfg)))
-        oauthName = pack (name (oauth (twitch cfg)))
-        chan = "#" `append` pack (channel (twitch cfg))
+        pass = pack (cfg ^. twitch . oauth . token)
+        oauthName = pack (cfg ^. twitch . oauth . name)
+        chan = "#" <> pack (cfg ^. twitch . channel)
 
     lift $ withSocketsDo $ WSS.runSecureClient host port "/" (app pass oauthName chan)
 
 
 sendCommand :: Connection -> Text -> Text -> IO ()
-sendCommand conn command text = WS.sendTextData conn (command `append` " " `append` text)
+sendCommand conn command text = WS.sendTextData conn (command <> " " <> text)
 
 processMessage :: Text -> TM.Message -> MaybeT IO Text
 processMessage _ (TM.Ping host) = return $ "PONG :" <> host

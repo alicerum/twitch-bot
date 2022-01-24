@@ -1,16 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Config (
-    Config (twitch),
-    Twitch (oauth, channel),
-    Oauth (token, name),
-    Database,
+    Config, twitch, database,
+    Twitch, oauth, channel,
+    Oauth, token, name,
     writeDefaultConfig,
     readConfig,
 ) where
 
+import GHC.Generics
+import Control.Lens
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
 import Data.Yaml
+import Data.Aeson.TH
+import Data.Aeson.Types
 import System.Directory (createDirectoryIfMissing)
 import qualified Data.ByteString as B
 import qualified Data.Text.Lazy.IO as DTL
@@ -18,62 +23,35 @@ import System.Environment (lookupEnv, getEnv)
 import Data.Maybe (fromMaybe)
 
 data Config = Config {
-    twitch :: Twitch
-  , database :: Database
-  } deriving (Eq, Show)
+    _twitch :: Twitch
+  , _database :: Database
+  } deriving (Eq, Show, Generic)
 
 data Oauth = Oauth {
-      token :: String
-    , name :: String
-} deriving (Eq, Show)
+      _token :: String
+    , _name :: String
+} deriving (Eq, Show, Generic)
 
 data Twitch = Twitch {
-      oauth :: Oauth
-    , channel :: String
-} deriving (Eq, Show)
+      _oauth :: Oauth
+    , _channel :: String
+} deriving (Eq, Show, Generic)
 
 data Database = Database {
-      path :: FilePath
-    , username :: String
-    , password :: String
-    } deriving (Eq, Show)
+      _path :: FilePath
+    , _username :: String
+    , _password :: String
+} deriving (Eq, Show, Generic)
 
-instance ToJSON Config where
-    toJSON config =
-        let db = database config
-            twt = twitch config
-            twitchOauth = oauth twt
+makeLenses ''Config
+makeLenses ''Oauth
+makeLenses ''Twitch
+makeLenses ''Database
 
-        in object [
-            "twitch" .= object [
-                "channel" .= channel twt,
-                "oauth" .= object [
-                    "token" .= token twitchOauth,
-                    "name" .= name twitchOauth
-                ]
-            ],
-            "database" .= object [
-                "path" .= path db,
-                "username" .= username db,
-                "password" .= password db ] ]
-
-instance FromJSON Config where
-    parseJSON = withObject "Config" $ \o -> do
-        twitchValue <- o .: "twitch"
-        twitchChannel <- twitchValue .: "channel"
-
-        oauthValue <- twitchValue .: "oauth"
-        oauthToken <- oauthValue .: "token"
-        oauthName <- oauthValue .: "name"
-
-        dbValue <- o .: "database"
-        path <- dbValue .: "path"
-        username <- dbValue .: "username"
-        password <- dbValue .: "password"
-
-        return $ Config (Twitch
-                            (Oauth oauthToken oauthName) twitchChannel)
-                            (Database path username password)
+deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''Config
+deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''Oauth
+deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''Twitch
+deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''Database
 
 
 defaultConfig :: Config

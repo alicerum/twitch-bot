@@ -36,6 +36,7 @@ dependencies:
 - show
 - lens
 - deepseq
+- aeson
 
 library:
   source-dirs: src
