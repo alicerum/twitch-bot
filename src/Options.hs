@@ -34,10 +34,10 @@ parseArgs :: [String] -> Options -> Either String Options
 parseArgs [] o = Right o
 parseArgs (a:args) o
     | a == "-c" || a == "--config" = if not (null args) && head (head args) /= '-'
-                                     then parseArgs (tail args) $ configPath .~ head args $ o
+                                     then parseArgs (tail args) $ o & configPath .~ head args
                                      else Left "No value for '-c' argument"
-    | a == "-n" || a == "--new" = parseArgs args $ newConfig .~ True $ o
-    | a == "-h" || a == "--help" = parseArgs args $ help .~ True $ o
+    | a == "-n" || a == "--new" = parseArgs args $ o & newConfig .~ True
+    | a == "-h" || a == "--help" = parseArgs args $ o & help .~ True
     | otherwise = parseArgs args o
 
 getOptions :: IO (Either String Options)
