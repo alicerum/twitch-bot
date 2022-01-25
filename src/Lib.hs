@@ -23,6 +23,7 @@ import qualified Twitch.Bot as TB
 import qualified Twitch.Message as TM
 import Data.Maybe
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT), runMaybeT)
+import Control.Monad.State (StateT (runStateT), MonadState (get, put))
 
 runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
@@ -38,20 +39,37 @@ runTwitchClient cfg = do
 sendCommand :: Connection -> Text -> Text -> IO ()
 sendCommand conn command text = WS.sendTextData conn (command <> " " <> text)
 
-processMessage :: Text -> TM.Message -> MaybeT IO Text
+processMessage :: Text -> TM.Message -> StateT TB.CommandState (MaybeT IO) Text
 processMessage _ (TM.Ping host) = return $ "PONG :" <> host
-processMessage chan msg@TM.PrivMsg{} = TB.processMessage msg >>= \resp -> return $ "PRIVMSG " <> chan <> " :" <> resp
+processMessage chan msg@TM.PrivMsg{} = do
+    resp <- (lift . TB.processMessage) msg
+    return $ "PRIVMSG " <> chan <> " :" <> resp
 
 printMessage :: TM.Message -> IO ()
 printMessage (TM.Ping host) = T.putStrLn $ "PING from " <> host
 printMessage (TM.PrivMsg user chan msg) = T.putStrLn $ "#" <> chan <> "> " <> user <> ": " <> msg
 
-processCommand :: Text -> Text -> Connection -> IO ()
+processCommand :: Text -> Text -> Connection -> StateT TB.CommandState IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
-    forM_ message printMessage
-    response <- runMaybeT $ TB.hoistMaybe (rightToMaybe message) >>= processMessage chan
-    forM_ response $ WS.sendTextData conn
+    forM_ message $ lift . printMessage
+    response <- lift $ runMaybeT $ TB.hoistMaybe (rightToMaybe message)
+
+    forM_ (rightToMaybe  message) $ \message -> do
+        state <- get
+        let maybeT = runStateT (processMessage chan message) state
+            mio = runMaybeT maybeT
+        res <- lift mio
+        forM_ res $ \(text, newS) -> do
+            put newS
+            lift $ WS.sendTextData conn text
+
+loop :: Text -> Connection -> StateT TB.CommandState IO ()
+loop chan conn = do
+    msg <- lift $ WS.receiveData conn
+    processCommand msg chan conn
+    loop chan conn
+    
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
 app pass name chan conn = do
@@ -61,7 +79,6 @@ app pass name chan conn = do
     sendCommand conn "NICK" name
     sendCommand conn "JOIN" chan
 
-    forever $ do
-        msg <- WS.receiveData conn
-        processCommand msg chan conn
+    runStateT (loop chan conn) TB.initialState
+    return ()
 

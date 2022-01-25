@@ -1,22 +1,37 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Twitch.Bot (
+    CommandState,
+    initialState,
     processMessage,
     hoistMaybe
 ) where
 
+import Control.Lens
 import Twitch.Message
 import Control.Monad (guard)
 import Data.Text (Text, pack, unpack)
 import qualified Data.Text as DT
 import qualified Data.Text.IO as T
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Maybe (MaybeT (MaybeT))
+import Control.Monad.Trans.Maybe
 import Twitch.Commands.Runh (runHString)
+import Control.Monad.Trans.State
+import qualified Twitch.Commands.Djinn.Djinn as Djinn
+
+newtype CommandState =
+    CommandState { _djinnState :: Djinn.State
+    } deriving (Show)
+makeLenses ''CommandState
+
+initialState :: CommandState
+initialState = CommandState Djinn.startState
 
 -- |username -> user's message text -> bot's response
 -- Nothing if bot should ignore the user's message
 type Command = Text -> Text -> MaybeT IO Text
+--type Command = Text -> Text -> StateT CommandState (MaybeT IO) Text
 
 hoistMaybe :: Monad m => Maybe a -> MaybeT m a
 hoistMaybe = MaybeT . return

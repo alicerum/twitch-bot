@@ -48,7 +48,7 @@ runHString s = do
 interp :: String -> IO (Maybe String)
 interp s = fmap errToMaybe $ runInterpreter $ do
     setImports ["Prelude", "ShowFun", "Control.Monad", "Data.List", "Data.Char"
-                , "Control.Lens", "Control.Applicative"]
+                , "Control.Lens", "Control.Applicative", "Control.Arrow"]
     -- interpret ("show $ " <> s) (as :: String)
     eval s
 

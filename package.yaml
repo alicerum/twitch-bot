@@ -37,6 +37,10 @@ dependencies:
 - lens
 - deepseq
 - aeson
+- mtl
+- pretty
+- haskeline
+- containers
 
 library:
   source-dirs: src
