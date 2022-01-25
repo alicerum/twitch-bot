@@ -8,10 +8,12 @@ import Control.Monad (join, MonadPlus (mplus))
 import Control.Concurrent
 import Control.Applicative ((<|>))
 import System.Directory.Internal.Prelude (timeout, fromMaybe)
-import Language.Haskell.Interpreter (Extension (UnknownExtension), eval, interpret, runInterpreter, setImports, InterpreterError (WontCompile), errMsg)
+import Language.Haskell.Interpreter (Extension (UnknownExtension), eval, interpret, runInterpreter, setImports, InterpreterError (WontCompile), errMsg, MonadTrans (lift))
 import Control.Exception (catch, evaluate)
 import qualified Control.Exception as E
 import Control.DeepSeq (force)
+import Twitch.Types (CommandWithState)
+import Control.Monad.Trans.Maybe (MaybeT(MaybeT))
 
 runWithTimeout :: String -> IO (Maybe String)
 runWithTimeout s = do
@@ -40,10 +42,12 @@ errToMaybe :: Either InterpreterError String -> Maybe String
 errToMaybe (Left e) = Just (printInterpErr e)
 errToMaybe (Right a) = Just a
 
-runHString :: String -> IO String
+maybeErrToResult :: Maybe String -> String
+maybeErrToResult = maybe "Timed Out" (take 400)
+
+runHString :: String -> CommandWithState String
 runHString s = do
-    res <- runWithTimeout s
-    return $ maybe "unknown errror" (take 400) (res <|> Just "Timed out")
+    lift $ MaybeT $ Just . maybeErrToResult <$> runWithTimeout s
 
 interp :: String -> IO (Maybe String)
 interp s = fmap errToMaybe $ runInterpreter $ do

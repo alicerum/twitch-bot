@@ -42,7 +42,7 @@ sendCommand conn command text = WS.sendTextData conn (command <> " " <> text)
 processMessage :: Text -> TM.Message -> StateT TB.CommandState (MaybeT IO) Text
 processMessage _ (TM.Ping host) = return $ "PONG :" <> host
 processMessage chan msg@TM.PrivMsg{} = do
-    resp <- (lift . TB.processMessage) msg
+    resp <- TB.processMessage msg
     return $ "PRIVMSG " <> chan <> " :" <> resp
 
 printMessage :: TM.Message -> IO ()
@@ -53,7 +53,6 @@ processCommand :: Text -> Text -> Connection -> StateT TB.CommandState IO ()
 processCommand msg chan conn = do
     let message = TM.parseMessage msg
     forM_ message $ lift . printMessage
-    response <- lift $ runMaybeT $ TB.hoistMaybe (rightToMaybe message)
 
     forM_ (rightToMaybe  message) $ \message -> do
         state <- get

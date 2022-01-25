@@ -39,6 +39,7 @@ library
       Twitch.Commands.Djinn.REPL
       Twitch.Commands.Runh
       Twitch.Message
+      Twitch.Types
   other-modules:
       Paths_twitch_bot
   hs-source-dirs:

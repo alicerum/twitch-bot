@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Twitch.Bot (
     CommandState,
+    CommandWithState,
     initialState,
     processMessage,
     hoistMaybe
@@ -18,54 +18,48 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import Twitch.Commands.Runh (runHString)
 import Control.Monad.Trans.State
+import Twitch.Types
 import qualified Twitch.Commands.Djinn.Djinn as Djinn
+import Twitch.Commands.Djinn (runDjinnCommand)
 
-newtype CommandState =
-    CommandState { _djinnState :: Djinn.State
-    } deriving (Show)
-makeLenses ''CommandState
 
-initialState :: CommandState
-initialState = CommandState Djinn.startState
-
--- |username -> user's message text -> bot's response
--- Nothing if bot should ignore the user's message
-type Command = Text -> Text -> MaybeT IO Text
---type Command = Text -> Text -> StateT CommandState (MaybeT IO) Text
-
-hoistMaybe :: Monad m => Maybe a -> MaybeT m a
-hoistMaybe = MaybeT . return
+hoistMaybe :: Maybe a -> CommandWithState a
+hoistMaybe = lift . MaybeT . return
 
 -- |processMessage takes user's message as an argument
 -- and returns optional response. Nothing in case no response needed.
-processMessage :: Message -> MaybeT IO Text
+processMessage :: Message -> CommandWithState Text
 processMessage (Ping _) = hoistMaybe Nothing
 processMessage (PrivMsg user _ text) = do
     guard $ not (DT.null text)
     guard $ DT.head text == '!'
     parseCommand user (DT.tail text)
 
-parseCommand :: Command
+parseCommand :: Command Text
 parseCommand user text = do
     let ws = DT.words text
         cmdName = if not (null ws) then head ws else ""
     cmd <- hoistMaybe $ lookup cmdName dispatch
     cmd user (DT.unwords (tail ws))
 
-dispatch :: [(Text, Command)]
+dispatch :: [(Text, Command Text)]
 dispatch = [
     ("echo", echoCommand),
     ("runh", runhCommand), 
+    ("djinn", djinnCommand),
     ("boroda", echoBoroda) ]
 
-echoCommand :: Command
+echoCommand :: Command Text
 echoCommand _ _ = return "I am a haskell bot"
 
-runhCommand :: Command
+runhCommand :: Command Text
 runhCommand user command = do
-    str <- lift $ runHString (unpack command)
+    str <- runHString (unpack command)
     return $ "@" <> user <> " > " <> pack str
 
-echoBoroda :: Command
+djinnCommand :: Command Text
+djinnCommand user msg = pack . take 400 <$> runDjinnCommand (unpack msg)
+
+echoBoroda :: Command Text
 echoBoroda user _ = return $ user <> " says HI to @LzheBoroda via haskell bot"
 
