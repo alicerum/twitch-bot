@@ -8,6 +8,9 @@ However, chatbot can be extended quite easily.
 ## TODO
 
 - [X] Implement parser pattern in `Twitch/Message.hs`
-- [ ] Improve error handling around config parser
+- [X] Improve error handling around config parser
 - [ ] Extract error types (`ExpectT` transformer) into standalone module
-- [ ] Implement haskell evaluation twitch chatbot command `!runh`
+- [X] Implement haskell evaluation twitch chatbot command `!runh`
+- [X] Incorporate `Djinn` into the bot and create `!djinn` chat command to invoke
+- [ ] Instead of forcing evaluation in `runHString`, force first N letters of stringified response
+
