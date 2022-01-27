@@ -11,7 +11,7 @@ import System.Directory.Internal.Prelude (timeout, fromMaybe)
 import Language.Haskell.Interpreter (Extension (UnknownExtension), eval, interpret, runInterpreter, setImports, InterpreterError (WontCompile), errMsg, MonadTrans (lift))
 import Control.Exception (catch, evaluate)
 import qualified Control.Exception as E
-import Control.DeepSeq (force)
+import Control.DeepSeq
 import Twitch.Types (CommandWithState)
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT))
 
@@ -20,7 +20,8 @@ runWithTimeout s = do
     mvar <- newEmptyMVar
     threadId <- forkIO  $ do
         res <- interp s
-        newRes <- evaluate $ force (show <$> res)
+        let resBegin = take 400 <$> res
+        newRes <- evaluate $ resBegin `deepseq` resBegin
         putMVar mvar newRes
 
     threadKiller <- forkIO $ do
@@ -46,8 +47,7 @@ maybeErrToResult :: Maybe String -> String
 maybeErrToResult = maybe "Timed Out" (take 400)
 
 runHString :: String -> CommandWithState String
-runHString s = do
-    lift $ MaybeT $ Just . maybeErrToResult <$> runWithTimeout s
+runHString s = lift . MaybeT $ Just . maybeErrToResult <$> runWithTimeout s
 
 interp :: String -> IO (Maybe String)
 interp s = fmap errToMaybe $ runInterpreter $ do
@@ -55,11 +55,6 @@ interp s = fmap errToMaybe $ runInterpreter $ do
                 , "Control.Lens", "Control.Applicative", "Control.Arrow"]
     -- interpret ("show $ " <> s) (as :: String)
     eval s
-
-readExt :: String -> Extension
-readExt s = case reads s of
-  [(e,[])] -> e
-  _        -> UnknownExtension s
                  
 printInterpErr :: InterpreterError -> String
 printInterpErr (WontCompile errors) =
