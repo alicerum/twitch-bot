@@ -24,6 +24,7 @@ import qualified Twitch.Message as TM
 import Data.Maybe
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT), runMaybeT)
 import Control.Monad.State (StateT (runStateT), MonadState (get, put))
+import Control.Concurrent (newChan, Chan, threadDelay, readChan, writeChan, forkIO)
 
 runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
@@ -35,6 +36,9 @@ runTwitchClient cfg = do
 
     lift $ withSocketsDo $ WSS.runSecureClient host port "/" (app pass oauthName chan)
 
+sendResponseMsg :: Chan Text -> Text -> IO ()
+sendResponseMsg msgChan text = do
+    writeChan msgChan text
 
 sendCommand :: Connection -> Text -> Text -> IO ()
 sendCommand conn command text = WS.sendTextData conn (command <> " " <> text)
@@ -49,8 +53,8 @@ printMessage :: TM.Message -> IO ()
 printMessage (TM.Ping host) = T.putStrLn $ "PING from " <> host
 printMessage (TM.PrivMsg user chan msg) = T.putStrLn $ "#" <> chan <> "> " <> user <> ": " <> msg
 
-processCommand :: Text -> Text -> Connection -> StateT TB.CommandState IO ()
-processCommand msg chan conn = do
+processCommand :: Chan Text -> Text -> Text -> Connection -> StateT TB.CommandState IO ()
+processCommand msgChan msg chan conn = do
     let message = TM.parseMessage msg
     forM_ message $ lift . printMessage
 
@@ -61,14 +65,20 @@ processCommand msg chan conn = do
         res <- lift mio
         forM_ res $ \(text, newS) -> do
             put newS
-            lift $ WS.sendTextData conn text
+            lift $ sendResponseMsg msgChan text
 
-loop :: Text -> Connection -> StateT TB.CommandState IO ()
-loop chan conn = do
+loop :: Chan Text -> Text -> Connection -> StateT TB.CommandState IO ()
+loop msgChan chan conn = do
     msg <- lift $ WS.receiveData conn
-    processCommand msg chan conn
-    loop chan conn
-    
+    processCommand msgChan msg chan conn
+    loop msgChan chan conn
+
+sendMsgLoop :: Chan Text -> Connection -> IO ()
+sendMsgLoop msgChan conn = do
+    text <- readChan msgChan
+    WS.sendTextData conn text
+    threadDelay $ 3 * (10^6) -- 3 seconds, time for twitch to wait until send
+    sendMsgLoop msgChan conn
 
 app :: Text -> Text -> Text -> WS.ClientApp ()
 app pass name chan conn = do
@@ -78,6 +88,10 @@ app pass name chan conn = do
     sendCommand conn "NICK" name
     sendCommand conn "JOIN" chan
 
-    runStateT (loop chan conn) TB.initialState
+    msgChannel <- newChan
+    -- run messageloop with delay in another thread
+    forkIO $ sendMsgLoop msgChannel conn
+
+    runStateT (loop msgChannel chan conn) TB.initialState
     return ()
 
