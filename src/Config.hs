@@ -11,7 +11,8 @@ module Config (
 ) where
 
 import GHC.Generics
-import Control.Lens
+import Optics.Lens
+import Optics.TH
 import System.IO (withFile, IOMode (ReadMode, WriteMode), hPutStr)
 import Data.Yaml
 import Data.Aeson.TH

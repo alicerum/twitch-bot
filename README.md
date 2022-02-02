@@ -18,5 +18,5 @@ necessary.
 - [ ] Extract error types (`ExpectT` transformer) into standalone module
 - [X] Implement haskell evaluation twitch chatbot command `!runh`
 - [X] Incorporate `Djinn` into the bot and create `!djinn` chat command to invoke
-- [ ] Instead of forcing evaluation in `runHString`, force first N letters of stringified response
+- [X] Instead of forcing evaluation in `runHString`, force first N letters of stringified response
 

@@ -2,7 +2,7 @@ module Twitch.Commands.Djinn (
     runDjinnCommand
 ) where
 
-import Control.Lens
+import Optics
 import Data.List
 import Twitch.Commands.Djinn.HTypes
 import Control.Monad.Trans.State

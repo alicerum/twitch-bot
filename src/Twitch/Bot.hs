@@ -8,7 +8,6 @@ module Twitch.Bot (
     hoistMaybe
 ) where
 
-import Control.Lens
 import Twitch.Message
 import Control.Monad (guard)
 import Data.Text (Text, pack, unpack)

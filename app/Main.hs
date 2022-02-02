@@ -1,10 +1,8 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Main where
 
 import Lib
+import Optics
 import Options
-import Control.Lens
 import Config (Config, writeDefaultConfig, readConfig)
 import System.IO (hPutStrLn, stderr)
 import Data.Yaml (prettyPrintParseException, ParseException)

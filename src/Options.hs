@@ -12,7 +12,9 @@ module Options (
 import System.Environment (getArgs)
 import qualified System.Environment as E
 import System.FilePath
-import Control.Lens
+import Optics
+import Optics.Lens
+import Optics.TH
 
 data Options = Options {
     _configPath :: String,

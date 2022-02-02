@@ -4,7 +4,7 @@ module Lib (
     runTwitchClient
 ) where
 
-import Control.Lens
+import Optics
 import Control.Monad
 import qualified Wuss as WSS
 import Data.Either.Combinators
@@ -30,9 +30,9 @@ runTwitchClient :: Config -> ExceptT String IO ()
 runTwitchClient cfg = do
     let host = "irc-ws.chat.twitch.tv"
         port = 443
-        pass = pack (cfg ^. twitch . oauth . token)
-        oauthName = pack (cfg ^. twitch . oauth . name)
-        chan = "#" <> pack (cfg ^. twitch . channel)
+        pass = pack (cfg ^. twitch % oauth % token)
+        oauthName = pack (cfg ^. twitch % oauth % name)
+        chan = "#" <> pack (cfg ^. twitch % channel)
 
     lift $ withSocketsDo $ WSS.runSecureClient host port "/" (app pass oauthName chan)
 

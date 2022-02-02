@@ -8,8 +8,8 @@ module Twitch.Types (
 ) where
 
 
-import Control.Lens
-import Control.Lens.TH
+import Optics.Lens
+import Optics.TH
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Maybe
 import Data.Text
