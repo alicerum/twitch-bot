@@ -19,6 +19,7 @@ import Control.Monad.Trans.Maybe
 import Twitch.Commands.Runh (runHString)
 import Control.Monad.Trans.State
 import Twitch.Types
+import qualified Twitch.Commands.Variables as TV
 import qualified Twitch.Commands.Djinn.Djinn as Djinn
 import Twitch.Commands.Djinn (runDjinnCommand)
 
@@ -44,9 +45,12 @@ parseCommand user text = do
 
 dispatch :: [(Text, Command Text)]
 dispatch = [
-    ("echo", echoCommand),
-    ("runh", runhCommand), 
-    ("djinn", djinnCommand),
+    ("echo",   echoCommand),
+    ("runh",   runhCommand), 
+    ("djinn",  djinnCommand),
+    ("let",    TV.letCommand),
+    ("unlet",  TV.unletCommand),
+    ("clear",  TV.clearCommand),
     ("boroda", echoBoroda) ]
 
 echoCommand :: Command Text
@@ -61,5 +65,5 @@ djinnCommand :: Command Text
 djinnCommand user msg = pack . take 400 <$> runDjinnCommand (unpack msg)
 
 echoBoroda :: Command Text
-echoBoroda user _ = return $ user <> " says HI to @LzheBoroda via haskell bot"
+echoBoroda user _ = return $ "@" <> user <> " says HI to @LzheBoroda via haskell bot"
 
