@@ -38,6 +38,7 @@ library
       Twitch.Commands.Djinn.LJTFormula
       Twitch.Commands.Djinn.REPL
       Twitch.Commands.Runh
+      Twitch.Commands.Variables
       Twitch.Message
       Twitch.Types
   other-modules:

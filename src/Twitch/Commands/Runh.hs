@@ -1,9 +1,13 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Twitch.Commands.Runh (
+    runInterp,
     runHString
 ) where
 
 import Data.List
 import Data.Char
+import qualified Data.Text as T
 import Control.Monad (join, MonadPlus (mplus))
 import Control.Concurrent
 import Control.Applicative ((<|>))
@@ -12,14 +16,15 @@ import Language.Haskell.Interpreter (Extension (UnknownExtension), eval, interpr
 import Control.Exception (catch, evaluate)
 import qualified Control.Exception as E
 import Control.DeepSeq
-import Twitch.Types (CommandWithState)
-import Control.Monad.Trans.Maybe (MaybeT(MaybeT))
+import Twitch.Types
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Except
 
-runWithTimeout :: String -> IO (Maybe String)
-runWithTimeout s = do
+runWithTimeout :: VarList -> String -> IO (Maybe String)
+runWithTimeout vl s = do
     mvar <- newEmptyMVar
     threadId <- forkIO  $ do
-        res <- interp s
+        res <- interp vl s
         let resBegin = take 400 <$> res
         newRes <- evaluate $ resBegin `deepseq` resBegin
         putMVar mvar newRes
@@ -33,9 +38,9 @@ runWithTimeout s = do
     killThread threadKiller
     return res
 
-evaluateExpr :: String -> IO (Maybe String)
-evaluateExpr s = do
-    res <- interp s
+evaluateExpr :: VarList -> String -> IO (Maybe String)
+evaluateExpr vl s = do
+    res <- interp vl s
     Just <$> (evaluate (force $ show s) `catch`
                     \(E.SomeException e) -> return ("Error: " <> show e))
 
@@ -46,16 +51,24 @@ errToMaybe (Right a) = Just a
 maybeErrToResult :: Maybe String -> String
 maybeErrToResult = maybe "Timed Out" (take 400)
 
-runHString :: String -> CommandWithState String
-runHString s = lift . MaybeT $ Just . maybeErrToResult <$> runWithTimeout s
+runHString :: VarList -> String -> CommandWithState String
+runHString vl s = lift . MaybeT $ Just . maybeErrToResult <$> runWithTimeout vl s
 
-interp :: String -> IO (Maybe String)
-interp s = fmap errToMaybe $ runInterpreter $ do
+runInterp :: VarList -> String -> ExceptT InterpreterError IO String
+runInterp vl s = ExceptT $ runInterpreter $ do
     setImports ["Prelude", "ShowFun", "Control.Monad", "Data.List", "Data.Char"
                 , "Control.Lens", "Control.Applicative", "Control.Arrow"]
-    -- interpret ("show $ " <> s) (as :: String)
-    eval s
-                 
+    eval $ T.unpack (letPrefix vl) <> s
+
+varPairToLet :: (VarName, VarDef) -> T.Text
+varPairToLet (n, v) = n <> " = " <> v
+
+letPrefix :: VarList -> T.Text
+letPrefix l = "let " <> T.intercalate "; " (varPairToLet <$> l) <> " in "
+    
+interp :: VarList -> String -> IO (Maybe String)
+interp vl s = fmap errToMaybe $ runExceptT $ runInterp vl s
+
 printInterpErr :: InterpreterError -> String
 printInterpErr (WontCompile errors) =
     -- if we get a compilation error we print it directly to avoid \"mueval: ...\"
@@ -75,3 +88,4 @@ printInterpErr (WontCompile errors) =
       skipSpaces xs = let xs' = dropWhile (==' ') xs
                       in skip '\n' xs' `mplus` return xs'
 printInterpErr other = "ping my owner about this error: " <> show other
+
